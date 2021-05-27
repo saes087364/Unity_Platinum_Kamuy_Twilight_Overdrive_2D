@@ -11,19 +11,15 @@ public class Player : MonoBehaviour
     Rigidbody2D playerRig;
     Animator playerAni;
 
-    //Force
-    public float forceX = 25;
-    public float forceY = 750;
-    public float forceDash = 3000;
-
     //Camera
     public GameObject[] objectCam;
     public Camera playerCam;
     public Vector3 playerOffset;
 
-    //Ground
-    public GameObject objectGrounded;
-    public bool isGrounded = false;
+    //Force
+    public float forceX = 25;
+    public float forceJump = 750;
+    public float forceDash = 3000;
 
     //HP
     public float healthPoint = 3.00f;
@@ -33,11 +29,15 @@ public class Player : MonoBehaviour
     public bool canMove = false;
 
     //Jump
-    public int jumpCount = 0;
+    public bool canJump = false;
+    public int multiJump = 1;
+    public int countJump = 0;
 
     //Dash
     public bool canDash = false;
     public bool isDashing = false;
+    public int multiDash = 1;
+    public int countDash = 0;
 
     //Attack
     public bool canAttack = false;
@@ -45,16 +45,22 @@ public class Player : MonoBehaviour
 
     //Hurt
     public bool canHurt = false;
-    public bool isStunning = false;
 
-    //Dead
-    public bool isDead = false;
+    //Ground
+    public GameObject objectGrounded;
+    public bool isGrounded = false;
 
     //Rise
     public bool isRising = false;
 
     //Fall
     public bool isFalling = false;
+
+    //Stun
+    public bool isStunning = false;
+
+    //Dead
+    public bool isDead = false;
 
     //public float horizontalDirection;
     //public float speedX;
@@ -71,7 +77,10 @@ public class Player : MonoBehaviour
         playerCam = objectCam[0].GetComponent<Camera>();                //objectCam.GetComponent<Camera>();
         playerOffset = playerTra.position;
         canMove = true;
+        canJump = true;
+        multiJump = 2;
         canDash = true;
+        multiDash = 2;
         canAttack = true;
         canHurt = true;
     }
@@ -83,7 +92,7 @@ public class Player : MonoBehaviour
         if (canMove)
         {
             MovementX();
-            MovementY();
+            Jump();
             Dash();
             Attack();
 
@@ -126,7 +135,10 @@ public class Player : MonoBehaviour
     //重設動作
     void ResetAni()
     {
-        playerRig.velocity = new Vector2(0, 0);
+        isRising = false;
+        isFalling = false;
+        playerAni.SetBool("isJumping", false);
+        playerAni.SetBool("isFalling", false);
         playerAni.SetBool("isDashing", false);
         playerAni.SetBool("isAttacking", false);
     }
@@ -174,41 +186,32 @@ public class Player : MonoBehaviour
     }
 
     //跳躍
-    void MovementY()
+    void Jump()
     {
-        //記得隱藏不要的按鍵
         //K跳躍
-        if (Input.GetKeyDown(KeyCode.K) && isGrounded)
-        {
-            jumpCount = 1;
-            playerAni.SetBool("isMoving", false);
-            playerRig.AddForce(Vector2.up * forceY);
-            playerAni.SetBool("isJumping", true);
-        }
-        else if (Input.GetKeyDown(KeyCode.K) && !isGrounded && jumpCount != 2)
-        {
-            jumpCount = 2;
-            playerRig.velocity = new Vector2(playerRig.velocity.x, 0);
-            playerRig.AddForce(Vector2.up * forceY);
-            playerAni.SetBool("isJumping", true);
-        }
-        /*
-        //上或W跳躍
-        if ((Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) && isGrounded)
-        {
-            jumpCount = 1;
-            playerAni.SetBool("isMoving", false);
-            playerRig.AddForce(Vector2.up * forceY);
-            playerAni.SetBool("isJumping", true);
-        }
-        else if ((Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) && !isGrounded && jumpCount != 2)
-        {
-            jumpCount = 2;
-            playerRig.velocity = new Vector2(playerRig.velocity.x, 0);
-            playerRig.AddForce(Vector2.up * forceY);
-            playerAni.SetBool("isJumping", true);
-        }
-        */
+        if (Input.GetKeyDown(KeyCode.K))
+            if (canJump)
+            {
+                playerRig.velocity = new Vector2(0, 0);
+                ResetAni();
+                StartCoroutine(CoolDownJump());
+            }
+    }
+
+    IEnumerator CoolDownJump()
+    {
+        canJump = false;
+        countJump++;
+        playerRig.AddForce(Vector2.up * forceJump);
+        isRising = true;
+        playerAni.SetBool("isJumping", true);
+
+        yield return new WaitForSeconds(0.10f);
+
+        if (countJump < multiJump)
+            canJump = true;
+        else
+            canJump = false;
     }
 
     //衝刺
@@ -217,35 +220,36 @@ public class Player : MonoBehaviour
         //L衝刺
         if (Input.GetKeyDown(KeyCode.L))
             if (canDash)
+            {
+                playerRig.velocity = new Vector2(0, 0);
+                ResetAni();
                 StartCoroutine(CoolDownDash());
+            }
     }
 
     IEnumerator CoolDownDash()
     {
-        ResetAni();
+        canDash = false;
+        countDash++;
 
         if (!playerSpr.flipX)
-        {
             playerRig.AddForce(Vector2.right * forceDash);
-        }
         else
-        {
             playerRig.AddForce(Vector2.left * forceDash);
-        }
 
-        canDash = false;
         isDashing = true;
         playerAni.SetBool("isDashing", true);
 
-        yield return new WaitForSeconds(0.333f);
+        yield return new WaitForSeconds(0.25f);
 
         playerRig.velocity = new Vector2(0, 0);
         playerAni.SetBool("isDashing", false);
         isDashing = false;
 
-        yield return new WaitUntil(() => isGrounded);
-
-        canDash = true;
+        if (countDash < multiDash)
+            canDash = true;
+        else
+            canDash = false;
     }
 
     //攻擊
@@ -254,18 +258,19 @@ public class Player : MonoBehaviour
         //J攻擊
         if (Input.GetKeyDown(KeyCode.J))
             if (canAttack)
+            {
+                ResetAni();
                 StartCoroutine(CoolDownAttack());
+            }
     }
 
     IEnumerator CoolDownAttack()
     {
-        ResetAni();
-
         canAttack = false;
         isAttacking = true;
         playerAni.SetBool("isAttacking", true);
 
-        yield return new WaitForSeconds(0.750f);
+        yield return new WaitForSeconds(0.75f);
 
         playerAni.SetBool("isAttacking", false);
         isAttacking = false;
@@ -280,39 +285,52 @@ public class Player : MonoBehaviour
             healthPoint -= damage;
 
             if (healthPoint > 0)
+            {
                 StartCoroutine(CoolDownHurt());
+            }
             else
+            {
+                playerRig.velocity = new Vector2(0, 0);
+                ResetAni();
                 StartCoroutine(IsDead());
+            }
         }
     }
 
-    IEnumerator CoolDownHurt(float invincibleTime = 2.00f, bool withStun = true, float stunningTime = 1.00f)
+    IEnumerator CoolDownHurt(bool withStun = true, float timeStunning = 0.50f, float timeInvincible = 1.50f)
     {
-        ResetAni();
-
         canHurt = false;
-        canMove = !withStun;
-        isStunning = withStun;
-        playerAni.SetBool("isStunning", withStun);
+
+        if (withStun)
+        {
+            playerRig.velocity = new Vector2(0, 0);
+            ResetAni();
+            StartCoroutine(CoolDownStun(timeStunning));
+        }
+
+        yield return new WaitForSeconds(timeInvincible);
+
+        canHurt = true;
+    }
+
+    IEnumerator CoolDownStun(float stunningTime)
+    {
+        canMove = false;
+        isStunning = true;
+        playerAni.SetBool("isStunning", true);
 
         yield return new WaitForSeconds(stunningTime);
 
         playerAni.SetBool("isStunning", false);
         isStunning = false;
         canMove = true;
-
-        yield return new WaitForSeconds(invincibleTime - stunningTime);
-
-        canHurt = true;
     }
 
     IEnumerator IsDead()
     {
-        ResetAni();
-
         canMove = false;
         playerAni.SetBool("isDead", true);
-        
+
         yield return 0;
         /*
         playerAni.SetBool("isDead", false);
@@ -326,8 +344,8 @@ public class Player : MonoBehaviour
         if (playerTra.position.y - playerOffset.y > 0 && !isGrounded)
         {
             isRising = true;
-            playerAni.SetBool("isJumping", true);
             isFalling = false;
+            playerAni.SetBool("isJumping", true);
             playerAni.SetBool("isFalling", false);
         }
         else
@@ -343,8 +361,8 @@ public class Player : MonoBehaviour
         if (playerTra.position.y - playerOffset.y < 0 && !isGrounded)
         {
             isFalling = true;
-            playerAni.SetBool("isFalling", true);
             isRising = false;
+            playerAni.SetBool("isFalling", true);
             playerAni.SetBool("isJumping", false);
         }
         else
@@ -363,14 +381,16 @@ public class Player : MonoBehaviour
         {
             foreach (ContactPoint2D element in collision.contacts)
             {
-                if (element.normal.y > 0.2f)
+                if (element.normal.y > 0.20f)
                 {
-                    isGrounded = true;
                     objectGrounded = collision.gameObject;
-                    isRising = false;
-                    isFalling = false;
-                    playerAni.SetBool("isJumping", false);
-                    playerAni.SetBool("isFalling", false);
+                    isGrounded = true;
+                    canJump = true;
+                    canDash = true;
+                    countJump = 0;
+                    countDash = 0;
+                    ResetAni();
+
                     break;
                 }
             }
@@ -385,8 +405,8 @@ public class Player : MonoBehaviour
     {
         if (collision.gameObject == objectGrounded)
         {
-            isGrounded = false;
             objectGrounded = null;
+            isGrounded = false;
         }
     }
 
