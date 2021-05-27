@@ -14,7 +14,7 @@ public class Player : MonoBehaviour
     //Force
     public float forceX = 25;
     public float forceY = 750;
-    public float forceDash = 5000;
+    public float forceDash = 3000;
 
     //Camera
     public GameObject[] objectCam;
@@ -25,12 +25,30 @@ public class Player : MonoBehaviour
     public GameObject objectGrounded;
     public bool isGrounded = false;
 
+    //HP
+    public float healthPoint = 3.00f;
+
+    //Move
+    //J攻擊；K跳躍、L衝刺
+    public bool canMove = false;
+
     //Jump
     public int jumpCount = 0;
 
     //Dash
     public bool canDash = false;
     public bool isDashing = false;
+
+    //Attack
+    public bool canAttack = false;
+    public bool isAttacking = false;
+
+    //Hurt
+    public bool canHurt = false;
+    public bool isStunning = false;
+
+    //Dead
+    public bool isDead = false;
 
     //Rise
     public bool isRising = false;
@@ -52,33 +70,65 @@ public class Player : MonoBehaviour
         objectCam = GameObject.FindGameObjectsWithTag("MainCamera");    //GameObject.Find("Main Camera");
         playerCam = objectCam[0].GetComponent<Camera>();                //objectCam.GetComponent<Camera>();
         playerOffset = playerTra.position;
+        canMove = true;
         canDash = true;
+        canAttack = true;
+        canHurt = true;
     }
 
     private void Update()
     {
         //持續監聽並執行以下方法
         //指令監聽
-        MovementX();
-        MovementY();
-        if (canDash)
+        if (canMove)
+        {
+            MovementX();
+            MovementY();
             Dash();
+            Attack();
 
-        //動畫監聽
-        if (!isRising)
-            IsRising();
-        if (!isFalling)
-            IsFalling();
+            //動畫監聽
+            if (!isRising)
+                IsRising();
+            if (!isFalling)
+                IsFalling();
+        }
     }
 
     private void FixedUpdate()
     {
-
     }
 
     private void LateUpdate()
     {
         MovementCamera();
+    }
+
+    //public Vector3 off;
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = new Color(1, 0, 0, 0.5f);
+        Gizmos.DrawSphere(playerTra.position + new Vector3(0, -0.4f, 0.2f), 0.2f);
+    }
+
+    //相機追人
+    void MovementCamera()
+    {
+        //只動X軸
+        //playerCam.transform.position += new Vector3(playerTra.position.x, 0, 0) - new Vector3(offset.x, 0, 0);
+        //offset = playerTra.position;
+
+        //都動
+        playerCam.transform.position += playerTra.position - playerOffset;
+        playerOffset = playerTra.position;
+    }
+
+    //重設動作
+    void ResetAni()
+    {
+        playerRig.velocity = new Vector2(0, 0);
+        playerAni.SetBool("isDashing", false);
+        playerAni.SetBool("isAttacking", false);
     }
 
     //水平移動
@@ -127,22 +177,22 @@ public class Player : MonoBehaviour
     void MovementY()
     {
         //記得隱藏不要的按鍵
-        //空白鍵跳躍
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        //K跳躍
+        if (Input.GetKeyDown(KeyCode.K) && isGrounded)
         {
             jumpCount = 1;
             playerAni.SetBool("isMoving", false);
             playerRig.AddForce(Vector2.up * forceY);
             playerAni.SetBool("isJumping", true);
         }
-        else if (Input.GetKeyDown(KeyCode.Space) && !isGrounded && jumpCount != 2)
+        else if (Input.GetKeyDown(KeyCode.K) && !isGrounded && jumpCount != 2)
         {
             jumpCount = 2;
             playerRig.velocity = new Vector2(playerRig.velocity.x, 0);
             playerRig.AddForce(Vector2.up * forceY);
             playerAni.SetBool("isJumping", true);
         }
-
+        /*
         //上或W跳躍
         if ((Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) && isGrounded)
         {
@@ -158,30 +208,21 @@ public class Player : MonoBehaviour
             playerRig.AddForce(Vector2.up * forceY);
             playerAni.SetBool("isJumping", true);
         }
-    }
-
-    //相機追人
-    void MovementCamera()
-    {
-        //只動X軸
-        //playerCam.transform.position += new Vector3(playerTra.position.x, 0, 0) - new Vector3(offset.x, 0, 0);
-        //offset = playerTra.position;
-
-        //都動
-        playerCam.transform.position += playerTra.position - playerOffset;
-        playerOffset = playerTra.position;
+        */
     }
 
     //衝刺
     void Dash()
     {
-        if (Input.GetKeyDown(KeyCode.E))
-            StartCoroutine(CoolDownDash());
+        //L衝刺
+        if (Input.GetKeyDown(KeyCode.L))
+            if (canDash)
+                StartCoroutine(CoolDownDash());
     }
 
     IEnumerator CoolDownDash()
     {
-        playerRig.velocity = new Vector2(0, 0);
+        ResetAni();
 
         if (!playerSpr.flipX)
         {
@@ -196,15 +237,87 @@ public class Player : MonoBehaviour
         isDashing = true;
         playerAni.SetBool("isDashing", true);
 
-        yield return new WaitForSeconds(0.2f);
+        yield return new WaitForSeconds(0.333f);
 
         playerRig.velocity = new Vector2(0, 0);
         playerAni.SetBool("isDashing", false);
         isDashing = false;
 
-        yield return new WaitUntil(() => isGrounded == true);
+        yield return new WaitUntil(() => isGrounded);
 
         canDash = true;
+    }
+
+    //攻擊
+    void Attack()
+    {
+        //J攻擊
+        if (Input.GetKeyDown(KeyCode.J))
+            if (canAttack)
+                StartCoroutine(CoolDownAttack());
+    }
+
+    IEnumerator CoolDownAttack()
+    {
+        ResetAni();
+
+        canAttack = false;
+        isAttacking = true;
+        playerAni.SetBool("isAttacking", true);
+
+        yield return new WaitForSeconds(0.750f);
+
+        playerAni.SetBool("isAttacking", false);
+        isAttacking = false;
+        canAttack = true;
+    }
+
+    //受傷
+    void Hurt(float damage = 1.00f)
+    {
+        if (canHurt)
+        {
+            healthPoint -= damage;
+
+            if (healthPoint > 0)
+                StartCoroutine(CoolDownHurt());
+            else
+                StartCoroutine(IsDead());
+        }
+    }
+
+    IEnumerator CoolDownHurt(float invincibleTime = 2.00f, bool withStun = true, float stunningTime = 1.00f)
+    {
+        ResetAni();
+
+        canHurt = false;
+        canMove = !withStun;
+        isStunning = withStun;
+        playerAni.SetBool("isStunning", withStun);
+
+        yield return new WaitForSeconds(stunningTime);
+
+        playerAni.SetBool("isStunning", false);
+        isStunning = false;
+        canMove = true;
+
+        yield return new WaitForSeconds(invincibleTime - stunningTime);
+
+        canHurt = true;
+    }
+
+    IEnumerator IsDead()
+    {
+        ResetAni();
+
+        canMove = false;
+        playerAni.SetBool("isDead", true);
+        
+        yield return 0;
+        /*
+        playerAni.SetBool("isDead", false);
+        canMove = true;
+        */
     }
 
     //是否正在上升
@@ -214,6 +327,7 @@ public class Player : MonoBehaviour
         {
             isRising = true;
             playerAni.SetBool("isJumping", true);
+            isFalling = false;
             playerAni.SetBool("isFalling", false);
         }
         else
@@ -230,6 +344,7 @@ public class Player : MonoBehaviour
         {
             isFalling = true;
             playerAni.SetBool("isFalling", true);
+            isRising = false;
             playerAni.SetBool("isJumping", false);
         }
         else
@@ -239,10 +354,12 @@ public class Player : MonoBehaviour
         }
     }
 
+
     //碰撞中
     private void OnCollisionStay2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Ground"))
+        //if (collision.gameObject.CompareTag("Ground"))
+        if (collision.gameObject.CompareTag("Ground") || collision.gameObject.CompareTag("Water"))
         {
             foreach (ContactPoint2D element in collision.contacts)
             {
@@ -257,6 +374,9 @@ public class Player : MonoBehaviour
                     break;
                 }
             }
+
+            if (collision.gameObject.CompareTag("Water"))
+                Hurt();
         }
     }
 
@@ -269,4 +389,5 @@ public class Player : MonoBehaviour
             objectGrounded = null;
         }
     }
+
 }
