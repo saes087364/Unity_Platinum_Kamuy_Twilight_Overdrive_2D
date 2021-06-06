@@ -64,14 +64,14 @@
     <Compile Include="Assets\MetroidvaniaController\Scripts\Enemies\Enemy.cs" />
     <Compile Include="Assets\MetroidvaniaController\Scripts\Player\CameraFollow.cs" />
     <Compile Include="Assets\MetroidvaniaController\Scripts\Environment\Grass.cs" />
-    <Compile Include="Assets\Player.cs" />
+    <Compile Include="Assets\Script\Player.cs" />
     <Compile Include="Assets\MetroidvaniaController\Scripts\Environment\DestructibleObject.cs" />
     <Compile Include="Assets\MetroidvaniaController\Scripts\Enemies\ThrowableProjectile.cs" />
+    <Compile Include="Assets\Script\SetNormalizedTime.cs" />
     <Compile Include="Assets\MetroidvaniaController\Animation\Scripts\PlaySoundBehaviour.cs" />
     <Compile Include="Assets\MetroidvaniaController\Scripts\KillZone.cs" />
     <Compile Include="Assets\MetroidvaniaController\Animation\Scripts\JumpStateBehaviour.cs" />
     <Compile Include="Assets\MetroidvaniaController\Scripts\Enemies\Ally.cs" />
-    <Compile Include="Assets\SetNormalizedTime.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">

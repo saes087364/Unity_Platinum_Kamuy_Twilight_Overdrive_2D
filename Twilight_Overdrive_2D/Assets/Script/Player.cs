@@ -118,13 +118,6 @@ public class Player : MonoBehaviour
         MovementCamera();
     }
 
-    //public Vector3 off;
-    private void OnDrawGizmos()
-    {
-        Gizmos.color = new Color(1, 0, 0, 0.5f);
-        Gizmos.DrawSphere(playerTra.position + new Vector3(0, -0.4f, 0.2f), 0.2f);
-    }
-
     //¬Û¾÷°l¤H
     void MovementCamera()
     {
