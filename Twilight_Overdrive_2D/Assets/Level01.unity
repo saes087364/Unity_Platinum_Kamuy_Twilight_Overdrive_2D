@@ -728,7 +728,7 @@ PlatformEffector2D:
   m_RotationalOffset: 0
   m_UseOneWay: 1
   m_UseOneWayGrouping: 0
-  m_SurfaceArc: 180
+  m_SurfaceArc: 135
   m_UseSideFriction: 0
   m_UseSideBounce: 0
   m_SideArc: 1
@@ -1443,7 +1443,7 @@ Rigidbody2D:
   m_Mass: 1
   m_LinearDrag: 0
   m_AngularDrag: 0.05
-  m_GravityScale: 1
+  m_GravityScale: 1.5
   m_Material: {fileID: 0}
   m_Interpolate: 0
   m_SleepingMode: 1
@@ -1547,26 +1547,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 720d49dcb1262074b821a91d8a57eb2f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  forceX: 25
-  forceY: 750
-  forceDash: 3000
   objectCam: []
   playerCam: {fileID: 0}
   playerOffset: {x: 0, y: 0, z: 0}
-  objectGrounded: {fileID: 0}
-  isGrounded: 0
+  forceX: 25
+  forceJump: 750
+  forceDash: 3000
   healthPoint: 3
-  canMove: 0
-  jumpCount: 0
-  canDash: 0
-  isDashing: 0
   canAttack: 0
   isAttacking: 0
+  multiAttack: 1
+  countAttack: 0
+  canJump: 0
+  multiJump: 1
+  countJump: 0
+  canDash: 0
+  isDashing: 0
+  multiDash: 1
+  countDash: 0
   canHurt: 0
-  isStunning: 0
-  isDead: 0
+  objectGrounded: {fileID: 0}
+  isGrounded: 0
   isRising: 0
   isFalling: 0
+  isStunning: 0
+  isDead: 0
 --- !u!95 &8483097521135153998
 Animator:
   serializedVersion: 3

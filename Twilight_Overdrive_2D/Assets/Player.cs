@@ -10,6 +10,7 @@ public class Player : MonoBehaviour
     SpriteRenderer playerSpr;
     Rigidbody2D playerRig;
     Animator playerAni;
+    AnimatorStateInfo playerAniStateInfo;
 
     //Camera
     public GameObject[] objectCam;
@@ -26,7 +27,13 @@ public class Player : MonoBehaviour
 
     //Move
     //J攻擊；K跳躍、L衝刺
-    public bool canMove = false;
+    //public bool canMove = false;
+
+    //Attack
+    public bool canAttack = false;
+    public bool isAttacking = false;
+    public int multiAttack = 1;
+    public int countAttack = 0;
 
     //Jump
     public bool canJump = false;
@@ -38,10 +45,6 @@ public class Player : MonoBehaviour
     public bool isDashing = false;
     public int multiDash = 1;
     public int countDash = 0;
-
-    //Attack
-    public bool canAttack = false;
-    public bool isAttacking = false;
 
     //Hurt
     public bool canHurt = false;
@@ -76,31 +79,33 @@ public class Player : MonoBehaviour
         objectCam = GameObject.FindGameObjectsWithTag("MainCamera");    //GameObject.Find("Main Camera");
         playerCam = objectCam[0].GetComponent<Camera>();                //objectCam.GetComponent<Camera>();
         playerOffset = playerTra.position;
-        canMove = true;
-        canJump = true;
+        multiAttack = 3;
         multiJump = 2;
-        canDash = true;
         multiDash = 2;
         canAttack = true;
+        canJump = true;
+        canDash = true;
         canHurt = true;
     }
 
     private void Update()
     {
-        //持續監聽並執行以下方法
-        //指令監聽
-        if (canMove)
-        {
-            MovementX();
-            Jump();
-            Dash();
-            Attack();
+        playerAniStateInfo = playerAni.GetCurrentAnimatorStateInfo(0);
 
+        //持續監聽並執行以下方法
+        if (!isStunning || !isDead)
+        {
             //動畫監聽
             if (!isRising)
                 IsRising();
             if (!isFalling)
                 IsFalling();
+
+            //指令監聽
+            MovementX();
+            Attack();
+            Jump();
+            Dash();
         }
     }
 
@@ -135,12 +140,15 @@ public class Player : MonoBehaviour
     //重設動作
     void ResetAni()
     {
-        isRising = false;
-        isFalling = false;
+        //isAttacking = false;
+        //isRising = false;
+        //isFalling = false;
+        //isDashing = false;
+        countAttack = 0;
+        playerAni.SetInteger("attack", countAttack);
         playerAni.SetBool("isJumping", false);
         playerAni.SetBool("isFalling", false);
         playerAni.SetBool("isDashing", false);
-        playerAni.SetBool("isAttacking", false);
     }
 
     //水平移動
@@ -157,32 +165,85 @@ public class Player : MonoBehaviour
         //右
         else if (Input.GetKey(KeyCode.RightArrow) || Input.GetKey(KeyCode.D))
         {
+            //playerTra.eulerAngles = Vector3.zero;
+            playerSpr.flipX = false;
+            playerRig.transform.Translate(Vector2.right * forceX * Time.deltaTime);
+
             if (isGrounded)
                 playerAni.SetBool("isMoving", true);
             else
                 playerAni.SetBool("isMoving", false);
-
-            //playerTra.rotation = Quaternion.Euler(new Vector3(0, 0, 0));
-            playerSpr.flipX = false;
-            playerRig.transform.Translate(Vector2.right * forceX * Time.deltaTime);
         }
         //左
         else if (Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A))
         {
+            //playerTra.eulerAngles = new Vector3(0, 180, 0);
+            playerSpr.flipX = true;
+            playerRig.transform.Translate(Vector2.left * forceX * Time.deltaTime);
+
             if (isGrounded)
                 playerAni.SetBool("isMoving", true);
             else
                 playerAni.SetBool("isMoving", false);
-
-            //playerTra.rotation = Quaternion.Euler(new Vector3(0, 180, 0));
-            playerSpr.flipX = true;
-            playerRig.transform.Translate(Vector2.left * forceX * Time.deltaTime);
         }
         //其它
         else
         {
             playerAni.SetBool("isMoving", false);
         }
+    }
+
+    //攻擊
+    void Attack()
+    {
+        if (!(playerAniStateInfo.IsTag("ATK01") || playerAniStateInfo.IsTag("ATK02")
+            || playerAniStateInfo.IsTag("ATK03")) && isAttacking)
+            StartCoroutine(CoolDownAttack());
+
+        if ((playerAniStateInfo.IsTag("ATK01") || playerAniStateInfo.IsTag("ATK02")
+            || playerAniStateInfo.IsTag("ATK03")) && playerAniStateInfo.normalizedTime > 1.00f)
+            StartCoroutine(CoolDownAttack());
+
+        if (countAttack >= multiAttack)
+            canAttack = false;
+
+        //J攻擊
+        if (Input.GetKeyDown(KeyCode.J))
+        {
+            if (canAttack)
+                if (countAttack == 0)
+                {
+                    ResetAni();
+                    countAttack = 1;
+                    isAttacking = true;
+                    playerAni.SetInteger("attack", countAttack);
+                }
+                else if (playerAniStateInfo.IsTag("ATK01") && countAttack == 1 && playerAniStateInfo.normalizedTime < 0.8f)
+                {
+                    countAttack = 2;
+                }
+                else if (playerAniStateInfo.IsTag("ATK02") && countAttack == 2 && playerAniStateInfo.normalizedTime < 0.8f)
+                {
+                    countAttack = 3;
+                }
+        }
+    }
+
+    IEnumerator CoolDownAttack()
+    {
+        countAttack = 0;
+        playerAni.SetInteger("attack", countAttack);
+        isAttacking = false;
+        canAttack = false;
+
+        yield return new WaitForSeconds(0.25f);
+
+        canAttack = true;
+    }
+
+    void GoToNextAttackAction()
+    {
+        playerAni.SetInteger("attack", countAttack);
     }
 
     //跳躍
@@ -200,11 +261,11 @@ public class Player : MonoBehaviour
 
     IEnumerator CoolDownJump()
     {
-        canJump = false;
         countJump++;
         playerRig.AddForce(Vector2.up * forceJump);
-        isRising = true;
         playerAni.SetBool("isJumping", true);
+        isRising = true;
+        canJump = false;
 
         yield return new WaitForSeconds(0.10f);
 
@@ -217,6 +278,9 @@ public class Player : MonoBehaviour
     //衝刺
     void Dash()
     {
+        if (!playerAniStateInfo.IsTag("Dash") && isDashing)
+            StartCoroutine(CoolDownDash());
+
         //L衝刺
         if (Input.GetKeyDown(KeyCode.L))
             if (canDash)
@@ -229,7 +293,6 @@ public class Player : MonoBehaviour
 
     IEnumerator CoolDownDash()
     {
-        canDash = false;
         countDash++;
 
         if (!playerSpr.flipX)
@@ -237,12 +300,13 @@ public class Player : MonoBehaviour
         else
             playerRig.AddForce(Vector2.left * forceDash);
 
-        isDashing = true;
         playerAni.SetBool("isDashing", true);
+        isDashing = true;
+        canDash = false;
 
         yield return new WaitForSeconds(0.25f);
 
-        playerRig.velocity = new Vector2(0, 0);
+        playerRig.velocity = new Vector2(0, playerRig.velocity.y);
         playerAni.SetBool("isDashing", false);
         isDashing = false;
 
@@ -250,31 +314,6 @@ public class Player : MonoBehaviour
             canDash = true;
         else
             canDash = false;
-    }
-
-    //攻擊
-    void Attack()
-    {
-        //J攻擊
-        if (Input.GetKeyDown(KeyCode.J))
-            if (canAttack)
-            {
-                ResetAni();
-                StartCoroutine(CoolDownAttack());
-            }
-    }
-
-    IEnumerator CoolDownAttack()
-    {
-        canAttack = false;
-        isAttacking = true;
-        playerAni.SetBool("isAttacking", true);
-
-        yield return new WaitForSeconds(0.75f);
-
-        playerAni.SetBool("isAttacking", false);
-        isAttacking = false;
-        canAttack = true;
     }
 
     //受傷
@@ -315,7 +354,6 @@ public class Player : MonoBehaviour
 
     IEnumerator CoolDownStun(float stunningTime)
     {
-        canMove = false;
         isStunning = true;
         playerAni.SetBool("isStunning", true);
 
@@ -323,25 +361,23 @@ public class Player : MonoBehaviour
 
         playerAni.SetBool("isStunning", false);
         isStunning = false;
-        canMove = true;
     }
 
     IEnumerator IsDead()
     {
-        canMove = false;
         playerAni.SetBool("isDead", true);
 
         yield return 0;
         /*
         playerAni.SetBool("isDead", false);
-        canMove = true;
         */
     }
 
     //是否正在上升
+    //因目前有反作用力，故數值不為0
     void IsRising()
     {
-        if (playerTra.position.y - playerOffset.y > 0 && !isGrounded)
+        if (playerTra.position.y - playerOffset.y > 0.25 && !isGrounded)
         {
             isRising = true;
             isFalling = false;
@@ -373,6 +409,26 @@ public class Player : MonoBehaviour
     }
 
 
+    //進入碰撞
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        //if (collision.gameObject.CompareTag("Ground"))
+        if (collision.gameObject.CompareTag("Ground") || collision.gameObject.CompareTag("Water"))
+        {
+            foreach (ContactPoint2D element in collision.contacts)
+            {
+                if (element.normal.y > 0.25f)
+                {
+                    countJump = 0;
+                    countDash = 0;
+                    ResetAni();
+
+                    break;
+                }
+            }
+        }
+    }
+
     //碰撞中
     private void OnCollisionStay2D(Collision2D collision)
     {
@@ -381,15 +437,12 @@ public class Player : MonoBehaviour
         {
             foreach (ContactPoint2D element in collision.contacts)
             {
-                if (element.normal.y > 0.20f)
+                if (element.normal.y > 0.25f)
                 {
                     objectGrounded = collision.gameObject;
                     isGrounded = true;
                     canJump = true;
                     canDash = true;
-                    countJump = 0;
-                    countDash = 0;
-                    ResetAni();
 
                     break;
                 }
