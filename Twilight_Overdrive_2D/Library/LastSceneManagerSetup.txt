@@ -1,1 +1,5 @@
-sceneSetups: []
+sceneSetups:
+- path: Assets/Scene/Atom City Act1.unity
+  isLoaded: 1
+  isActive: 1
+  isSubScene: 0
